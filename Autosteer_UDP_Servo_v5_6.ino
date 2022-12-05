@@ -57,9 +57,9 @@
    #define SERVO_PIN 3                // PD3 Servo PIN
    const int SERVO_POS_ON = 20;       //Postion 1 des Servos, Werte für min. max. Winkel hängen vom Servo ab Werte ab 10 bis 160
    const int SERVO_POS_OFF = 150;     //Postion 2 des Servos, Werte für min. max. Winkel hängen vom Servo ab Werte ab 10 bis 160
-   int SERVO_DELAY = 40;
-   int SERVO_START = 0;
- 
+   const long SERVO_DELAY = 1000;
+   unsigned long SERVO_START = 0;
+   
   //ethercard 10,11,12,13  
   // Arduino Nano = 10 depending how CS of Ethernet Controller ENC28J60 is Connected
   #define CS_Pin 10
@@ -350,6 +350,7 @@
     // Loop triggers every 100 msec and sends back gyro heading, and roll, steer angle etc   
     currentTime = millis();
    
+   
     if (currentTime - lastTime >= LOOP_TIME)
     {
       lastTime = currentTime;
@@ -494,24 +495,27 @@
       if (steerAngleActual < 0) steerAngleActual = (steerAngleActual * steerSettings.AckermanFix);
       
       if (watchdogTimer < WATCHDOG_THRESHOLD)
-        {    
-          if (SERVO_START < SERVO_DELAY)
+        {               
+            //Serial.println ("----------"); 
+            
+          if (currentTime - SERVO_START <= SERVO_DELAY)
             {   //Serial.println("Servo_initial");
-                //Serial.println(SERVO_START);
-             if (SERVO_START == 0)
+                
+                              
+             if (currentTime - SERVO_START <= LOOP_TIME)
                 {
                   digitalWrite(AutosteerLED_PIN, HIGH); //schaltet LED "ein" h1
                   Steerservo.write(SERVO_POS_ON);       //schwenkt Servo in die "Ein-Position"
-                  SERVO_START++;         //startet Delayzähler
+                  SERVO_START = currentTime - LOOP_TIME-10;         //startet Delayzähler
                   //Serial.println("Servo schaltet ein");
-                  //Serial.println(SERVO_START);
+                 
                 }
         
                 else 
                 {
-                SERVO_START++;        //erhöht Delayzähler
-                //Serial.println("Servo_Start zählt hoch");
-                //Serial.println(SERVO_START);
+                
+                //Serial.println("Servo_Start zählt hoch");      //Durchlauf bis Servodelay erreicht ist
+                                
                 }     
             }
           else
@@ -534,8 +538,8 @@
         else 
         
           digitalWrite(DIR1_RL_ENABLE, 1);
-          //Serial.println("Jetzt müsste der Motor drehen");
-          //Serial.println(SERVO_START);     
+          Serial.println("Jetzt müsste der Motor drehen");
+              
         
         steerAngleError = steerAngleActual - steerAngleSetPoint;   //calculate the steering error
         //if (abs(steerAngleError)< steerSettings.lowPWM) steerAngleError = 0;
@@ -564,15 +568,15 @@
 
          digitalWrite(AutosteerLED_PIN, LOW);  // schaltet LED "aus" h1   
          Steerservo.write(SERVO_POS_OFF);        // max Winkel hängt vom Servo ab, Werte ab 165
-         SERVO_START = 0;
-         //Serial.println("Servo schaltet aus");
-         //Serial.println(SERVO_START);
-                       
+         SERVO_START = currentTime;
+         
+         Serial.println("Servo schaltet aus");
+         
         pwmDrive = 0; //turn off steering motor
         motorDrive(); //out to motors the pwm value
         pulseCount=0;
       }
-
+    
     } //end of timed loop
 
     //This runs continuously, outside of the timed loop, keeps checking for new udpData, turn sense
